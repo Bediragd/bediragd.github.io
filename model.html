@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>model - Bedir Agdemir</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+</head>
+<body>
+    <header>
+        <h1>Bedir Agdemir - Kodlarım</h1>
+        <nav>
+            <a href="index.html">Ana Sayfa</a> |
+            <a href="mevzuat.html">mevzuat.py</a> |
+            <a href="model.html">model.py</a> |
+            <a href="rag.html">RAG.py</a> |
+            <a href="test.html">Test.py</a> |
+            <a href="testrag.html">TestRAG.py</a>
+        </nav>
+    </header>
+    <main>
+        <h2>model.py</h2>
+        <pre><code class="language-python">
+import tkinter as tk
+from tkinter import scrolledtext
+from Test import run_gpt2_test
+from TestRAG import run_chroma_test
+from RAG import run_chroma_test_karar
+from mevzuat import HukukiSorgu
+
+class HukukYardimGUI:
+    def __init__(self, root):
+        self.root = root
+        root.title(&quot;HUKUKAI - Hukuk Yardım Arayüzü&quot;)
+        root.geometry(&quot;800x650&quot;)
+        root.configure(bg=&quot;#121212&quot;)  # Koyu, modern tema
+
+        # Başlık
+        self.label = tk.Label(root, text=&quot;Sorunuzu buraya yazınız:&quot;, fg=&quot;#E0E0E0&quot;, bg=&quot;#121212&quot;,
+                              font=(&quot;Segoe UI&quot;, 14, &quot;bold&quot;))
+        self.label.pack(pady=(20, 10))
+
+        # Girdi kutusu
+        self.entry = tk.Entry(root, width=80, font=(&quot;Segoe UI&quot;, 12), bg=&quot;#1E1E1E&quot;, fg=&quot;#FFFFFF&quot;,
+                              insertbackground=&#x27;white&#x27;, relief=&quot;flat&quot;)
+        self.entry.pack(pady=(0, 20), ipady=8)
+
+        # Checkboxlar Frame içinde yatay dizim
+        cb_frame = tk.Frame(root, bg=&quot;#121212&quot;)
+        cb_frame.pack(pady=10)
+
+        self.var_gpt = tk.BooleanVar()
+        self.var_dilekce = tk.BooleanVar()
+        self.var_karar = tk.BooleanVar()
+        self.var_hukuki_madde = tk.BooleanVar()
+
+        cb_style = {&quot;bg&quot;: &quot;#121212&quot;, &quot;fg&quot;: &quot;#CCCCCC&quot;, &quot;selectcolor&quot;: &quot;#333333&quot;,
+                    &quot;activebackground&quot;: &quot;#121212&quot;, &quot;font&quot;: (&quot;Segoe UI&quot;, 11)}
+
+        self.cb1 = tk.Checkbutton(cb_frame, text=&quot;GPT-2 ile cevapla&quot;, variable=self.var_gpt, **cb_style)
+        self.cb2 = tk.Checkbutton(cb_frame, text=&quot;Dilekçe ara&quot;, variable=self.var_dilekce, **cb_style)
+        self.cb3 = tk.Checkbutton(cb_frame, text=&quot;Karar ara&quot;, variable=self.var_karar, **cb_style)
+        self.cb4 = tk.Checkbutton(cb_frame, text=&quot;Hukuki Madde Ara&quot;, variable=self.var_hukuki_madde, **cb_style)
+
+        self.cb1.grid(row=0, column=0, padx=15, pady=5, sticky=&#x27;w&#x27;)
+        self.cb2.grid(row=0, column=1, padx=15, pady=5, sticky=&#x27;w&#x27;)
+        self.cb3.grid(row=0, column=2, padx=15, pady=5, sticky=&#x27;w&#x27;)
+        self.cb4.grid(row=0, column=3, padx=15, pady=5, sticky=&#x27;w&#x27;)
+
+        # Çalıştır Butonu
+        self.btn = tk.Button(root, text=&quot;Çalıştır&quot;, command=self.coktan_secmeli_islem,
+                             width=30, bg=&quot;#2979FF&quot;, fg=&quot;white&quot;, font=(&quot;Segoe UI&quot;, 12, &quot;bold&quot;),
+                             relief=&quot;flat&quot;, activebackground=&quot;#5393FF&quot;, cursor=&quot;hand2&quot;)
+        self.btn.pack(pady=20, ipady=8)
+
+        # Çıktı alanı
+        self.output = scrolledtext.ScrolledText(root, wrap=tk.WORD, width=90, height=22,
+                                                bg=&quot;#1E1E1E&quot;, fg=&quot;#E0E0E0&quot;, font=(&quot;Consolas&quot;, 11),
+                                                relief=&quot;sunken&quot;, borderwidth=2)
+        self.output.pack(padx=20, pady=(0, 20))
+
+        # HukukiSorgu örneği
+        self.hukuki_sorgu = HukukiSorgu()
+
+    def temizle_ekran(self):
+        self.output.delete(1.0, tk.END)
+
+    def yazdir(self, yazi):
+        self.output.insert(tk.END, yazi + &quot;\n&quot;)
+        self.output.see(tk.END)
+
+    def coktan_secmeli_islem(self):
+        self.temizle_ekran()
+        user = self.entry.get().strip()
+        if not user:
+            self.yazdir(&quot;⚠️ Lütfen bir soru girin.&quot;)
+            return
+
+        if self.var_gpt.get():
+            self.yazdir(&quot;🔄 Model yükleniyor (CPU üzerinde)...&quot;)
+            cevap = run_gpt2_test(user)
+            self.yazdir(&quot;\n🤖 Cevap:\n&quot; + cevap + &quot;\n&quot; + &quot;-&quot; * 50 + &quot;\n&quot;)
+
+        if self.var_dilekce.get():
+            self.yazdir(&quot;\n📁 Dilekçeler aranıyor...\n&quot;)
+            dilekceler = run_chroma_test(user)
+            if dilekceler:
+                for dilekce in dilekceler:
+                    self.yazdir(dilekce)
+            else:
+                self.yazdir(&quot;❗ Dilekçe bulunamadı.&quot;)
+
+        if self.var_karar.get():
+            self.yazdir(&quot;\n📂 Kararlar aranıyor...\n&quot;)
+            kararlar = run_chroma_test_karar(user)
+            if kararlar:
+                for karar in kararlar:
+                    self.yazdir(karar)
+            else:
+                self.yazdir(&quot;❗ Karar bulunamadı.&quot;)
+
+        if self.var_hukuki_madde.get():
+            self.yazdir(&quot;\n⚖ Hukuki maddeler aranıyor...\n&quot;)
+            try:
+                sonuclar = self.hukuki_sorgu.sorgula(user)
+                if sonuclar:
+                    for madde in sonuclar:
+                        self.yazdir(madde)
+                else:
+                    self.yazdir(&quot;❗ Hukuki madde bulunamadı.&quot;)
+            except Exception as e:
+                self.yazdir(f&quot;❌ Hata oluştu: {e}&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    root = tk.Tk()
+    app = HukukYardimGUI(root)
+    root.mainloop()
+
+        </code></pre>
+    </main>
+    <footer>
+        <p>&copy; 2025 Bedir Agdemir</p>
+    </footer>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+</body>
+</html>

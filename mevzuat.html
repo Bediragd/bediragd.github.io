@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>mevzuat - Bedir Agdemir</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+</head>
+<body>
+    <header>
+        <h1>Bedir Agdemir - Kodlarım</h1>
+        <nav>
+            <a href="index.html">Ana Sayfa</a> |
+            <a href="mevzuat.html">mevzuat.py</a> |
+            <a href="model.html">model.py</a> |
+            <a href="rag.html">RAG.py</a> |
+            <a href="test.html">Test.py</a> |
+            <a href="testrag.html">TestRAG.py</a>
+        </nav>
+    </header>
+    <main>
+        <h2>mevzuat.py</h2>
+        <pre><code class="language-python">
+from sentence_transformers import SentenceTransformer
+import chromadb
+import time
+
+
+class HukukiSorgu:
+    def __init__(self, model_name=&quot;nomic-ai/nomic-embed-text-v1&quot;, db_path=&quot;./nomic_chroma_db_mevzuat&quot;,
+                 collection_name=&quot;mevzuat&quot;):
+        print(&quot;🔄 Model yükleniyor (CPU üzerinde)...&quot;)
+        self.model = SentenceTransformer(
+            model_name,
+            trust_remote_code=True,
+            device=&quot;cpu&quot;
+        )
+        print(&quot;📂 Chroma veri tabanı yükleniyor...&quot;)
+        try:
+            self.client = chromadb.PersistentClient(path=db_path)
+            self.collection = self.client.get_or_create_collection(name=collection_name)
+        except Exception as e:
+            print(&quot;❌ Veritabanı açılırken hata oluştu:&quot;, e)
+            raise Exception(&quot;Veritabanı hatası&quot;)
+
+    def sorgula(self, soru):
+        if not soru:
+            print(&quot;❗ Lütfen boş bir soru girmeyin.&quot;)
+            return []
+
+        start_time = time.time()
+        embedding = self.model.encode([f&quot;search_query: {soru}&quot;])[0]
+
+        try:
+            sonuclar = self.collection.query(
+                query_embeddings=[embedding],
+                n_results=3,
+                include=[&quot;documents&quot;, &quot;metadatas&quot;, &quot;distances&quot;]
+            )
+        except Exception as e:
+            print(&quot;❌ Sorgu sırasında hata oluştu:&quot;, e)
+            return []
+
+        elapsed = time.time() - start_time
+        print(f&quot;\n⏱ Sorgu {elapsed:.2f} saniyede tamamlandı.\n&quot;)
+
+        maddeler = []
+        for i, (metin, metadata, mesafe) in enumerate(
+                zip(sonuclar[&#x27;documents&#x27;][0], sonuclar[&#x27;metadatas&#x27;][0], sonuclar[&#x27;distances&#x27;][0]), start=1
+        ):
+            madde_text = (
+                f&quot;--- {i}. Madde ---\n&quot;
+                f&quot;📏 Benzerlik uzaklığı: {mesafe:.4f}\n&quot;
+                f&quot;📄 Metin:\n{metin}\n&quot;
+                + &quot;-&quot; * 80 + &quot;\n&quot;
+            )
+            print(madde_text)
+            maddeler.append(madde_text)
+
+        return maddeler  # Liste olarak tüm maddeleri dön
+
+        </code></pre>
+    </main>
+    <footer>
+        <p>&copy; 2025 Bedir Agdemir</p>
+    </footer>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+</body>
+</html>

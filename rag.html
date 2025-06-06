@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>rag - Bedir Agdemir</title>
+    <link rel="stylesheet" href="css/styles.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+</head>
+<body>
+    <header>
+        <h1>Bedir Agdemir - Kodlarım</h1>
+        <nav>
+            <a href="index.html">Ana Sayfa</a> |
+            <a href="mevzuat.html">mevzuat.py</a> |
+            <a href="model.html">model.py</a> |
+            <a href="rag.html">RAG.py</a> |
+            <a href="test.html">Test.py</a> |
+            <a href="testrag.html">TestRAG.py</a>
+        </nav>
+    </header>
+    <main>
+        <h2>rag.py</h2>
+        <pre><code class="language-python">
+def run_chroma_test_karar(user):
+    from sentence_transformers import SentenceTransformer
+    import chromadb
+    import time
+
+    print(&quot;🔄 Model yükleniyor (CPU üzerinde)...&quot;)
+    model = SentenceTransformer(
+        &quot;nomic-ai/nomic-embed-text-v1&quot;,
+        trust_remote_code=True,
+        device=&quot;cpu&quot;
+    )
+
+    print(&quot;📂 Chroma veri tabanı yükleniyor...&quot;)
+    try:
+        client = chromadb.PersistentClient(path=&quot;./nomic_chroma_db&quot;)
+        collection = client.get_or_create_collection(
+            name=&quot;karar_vektorlugu_v2&quot;,
+        )
+    except Exception as e:
+        print(&quot;❌ Veritabanı açılırken hata oluştu:&quot;, e)
+        exit(1)
+
+    soru = user.strip()
+    if not soru:
+        print(&quot;❗ Lütfen boş bir soru girmeyin.&quot;)
+        exit(1)
+
+    start_time = time.time()
+    embedding = model.encode([f&quot;search_query: {soru}&quot;])[0]
+
+    try:
+        sonuclar = collection.query(
+            query_embeddings=[embedding],
+            n_results=5,
+            include=[&quot;documents&quot;, &quot;metadatas&quot;, &quot;distances&quot;]
+        )
+    except Exception as e:
+        print(&quot;❌ Sorgu sırasında hata oluştu:&quot;, e)
+        exit(1)
+
+    elapsed = time.time() - start_time
+    print(f&quot;\n⏱ Sorgu {elapsed:.2f} saniyede tamamlandı.\n&quot;)
+    print(&quot;📚 En Benzer Kararlar:\n&quot;)
+
+    kararlar = []
+    for i, (karar, dosya, uzaklik) in enumerate(
+            zip(sonuclar[&#x27;documents&#x27;][0], sonuclar[&#x27;metadatas&#x27;][0], sonuclar[&#x27;distances&#x27;][0]),
+            start=1
+    ):
+        dosya_adi = dosya.get(&quot;dosya&quot;, &quot;bilinmiyor&quot;)
+        madde_metni = (
+            f&quot;--- {i}. Karar ---\n&quot;
+            f&quot;📏 Uzaklık: {uzaklik:.4f}\n&quot;
+            f&quot;📄 İçerik:\n{karar}\n&quot;
+            + &quot;-&quot; * 80 + &quot;\n&quot;
+        )
+        print(madde_metni)
+        kararlar.append(madde_metni)
+
+    return kararlar  # Liste halinde tüm kararları döndür
+
+        </code></pre>
+    </main>
+    <footer>
+        <p>&copy; 2025 Bedir Agdemir</p>
+    </footer>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+</body>
+</html>
