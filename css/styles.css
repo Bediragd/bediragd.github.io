@@ -28,3 +28,13 @@ footer {
     bottom: 0;
     width: 100%;
 }
+pre code {
+    display: block;
+    max-height: 400px;
+    overflow-y: auto;
+    background-color: #1e1e1e;
+    padding: 1em;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #f8f8f2;
+}
